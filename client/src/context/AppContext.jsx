@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import api from '../api/api.js'
 import toast from 'react-hot-toast'
 import { useNavigate } from "react-router-dom";
+import debounce from 'lodash.debounce'
 
 
 const AppContext = createContext(undefined)
@@ -39,7 +40,7 @@ export function AppContextProvider({ children }) {
 
     useEffect(() => {
         checkSession()
-    }, [checkSession])
+    }, [])
 
     const login = async (email, password) => {
         try {
@@ -181,6 +182,52 @@ export function AppContextProvider({ children }) {
         }, [user]
     )
 
+    const handleChat = useCallback(
+        async (message) => {
+            if (!user || !activeProject) return;
+            setChatLoading(true)
+
+            try {
+                const { data } = await api.post(`/api/projects/${activeProject._id}/chat`, { message })
+                setActiveProject(data)
+                if (data.errors && data.errors.length > 0) {
+                    toast.error(`${data.errors.length} revision pathc(es) failed`)
+                } else {
+                    toast.success(`Updatesd to version ${data.version} successfully`)
+                }
+            } catch (error) {
+                console.error('Revision request failed', error)
+                toast.error(error?.response?.data?.error || 'Revision request failed')
+            } finally {
+                setChatLoading(false)
+            }
+        }, [user, activeProject]
+    )
+
+    const deboucedSave = useMemo(()=>
+        debounce(async (id, files) => {
+            try {
+                await api.put(`/api/projects/${id}/files`, { files })
+                toast.success('Changes saved')
+            } catch (error) {
+                console.error('Failed to auto-save files', error)
+                toast.error('Failed to save code modifications')
+            }
+        }, 1000), []
+    )
+
+    useEffect(() => {
+        return ()=> {deboucedSave.cancel()}
+    }, [deboucedSave])
+
+    const updateProjectFiles = useCallback(
+        async (files) => {
+          if (!user || !activeProject) return;
+          deboucedSave(activeProject._id, files)
+
+        },[activeProject, user, deboucedSave]
+    )
+
 
     return (
         <AppContext.Provider value={{
@@ -202,7 +249,9 @@ export function AppContextProvider({ children }) {
             loadProject,
             loadProjects,
             handleGenerate,
-            handleDelete
+            handleDelete, 
+            updateProjectFiles,
+            handleChat
         }}>
             {children}
         </AppContext.Provider>
