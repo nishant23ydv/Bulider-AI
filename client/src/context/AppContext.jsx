@@ -204,7 +204,7 @@ export function AppContextProvider({ children }) {
         }, [user, activeProject]
     )
 
-    const deboucedSave = useMemo(()=>
+    const debouncedSave = useMemo(()=>
         debounce(async (id, files) => {
             try {
                 await api.put(`/api/projects/${id}/files`, { files })
@@ -217,15 +217,15 @@ export function AppContextProvider({ children }) {
     )
 
     useEffect(() => {
-        return ()=> {deboucedSave.cancel()}
-    }, [deboucedSave])
+        return ()=> {debouncedSave.flush()}
+    }, [debouncedSave])
 
     const updateProjectFiles = useCallback(
         async (files) => {
           if (!user || !activeProject) return;
-          deboucedSave(activeProject._id, files)
+          debouncedSave(activeProject._id, files)
 
-        },[activeProject, user, deboucedSave]
+        },[activeProject, user, debouncedSave]
     )
 
 
