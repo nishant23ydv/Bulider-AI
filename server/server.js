@@ -4,15 +4,17 @@ import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import { connectToDB } from './config/db.js'
 import authRouter from './routes/authRoutes.js'
+import projectRouter from './routes/projectRoutes.js'
 
 const app = express()
-connectToDB()
+await connectToDB()
 app.use(cors({origin: process.env.ORIGINS.split(','), credentials: true}))
 app.use(cookieParser())
-
 app.use(express.json())
+
 app.get('/', (req, res)=> res.send('Server is Live! '))
 app.use('/api/auth', authRouter)
+app.use('/api/projects', projectRouter)
 
 app.get('/', (req, res)=> res.send('Server is Live!'))
 
